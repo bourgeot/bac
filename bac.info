@@ -1,0 +1,4 @@
+name = BAC
+description = An interactive blood alcohol calculator using jquery ui and d3.js
+package = P21
+core = 7.x

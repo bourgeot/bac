@@ -1,0 +1,192 @@
+<?php
+
+/*
+ * Implements hook_menu
+ */
+function bac_menu() {
+
+  $items = array(
+    'bac' => array(
+      'page arguments' => array('bac_calculator'),
+      'page callback' => 'drupal_get_form',
+      'title' => t('Interactive Blood Alcohol Calculator'),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    ),
+  );
+  return $items;
+}
+/*
+ * BAC calculator
+ * This mostly uses javascript libraries d3 and jquery/jquery ui.
+ * The function defines some form elements and the page structure where the
+ * action can take place.
+ */
+function bac_calculator($form, &$form_state) {
+  drupal_add_js('misc/ui/jquery.ui.slider.min.js', 'file');
+  drupal_add_js('sites/all/modules/bac/js/bac-controls.js', 'file');
+  $form=array();
+  $hours = 8;
+  $form = array(
+    'intro' => array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => 'intro',
+      ),
+      '#weight' => 0,
+      array(
+      '#theme' => 'html_tag',
+      '#tag' => 'h2',
+      '#value' => 'Buzz-O-Graph',
+      ),
+      array(
+      '#theme' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => 'Manage your consumption for a 21st night out you can actually remember!',
+      ),
+    ),
+    'bog' => array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => 'buzz-o-graphic',
+      ),
+      '#weight' => 1,
+    ),
+    'legend' => array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => 'legend',
+      ),
+      '#weight' => 2,
+    ),
+    'vitals' => array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => 'vital-statistics',
+      ),
+      '#weight' => 3,
+      'sex' => array(
+        '#type' => 'radios',
+        '#title' => 'Sex',
+        '#options' => array('M'=>t('M'), 'F'=>t('F'), 'T'=>t('T')),
+        '#default_value' => 'M',
+      ),
+      'weight' => array(
+        '#type' => 'textfield',
+        '#title' => 'Weight (lbs)',
+        '#default_value' => 150,
+        '#attributes' => array(
+          'id' => 'weight-control',
+        ),
+      ),
+    ),
+    'results_area' => array(
+      '#type' => 'containter',
+      '#attributes' => array(
+        'id' => 'buzz-o-meter',
+      ),
+      '#weight' => 4,
+      'title' => array(
+        '#theme' => 'html_tag',
+        '#tag' => 'h2',
+        '#value' => 'BAC Over Time',
+        '#weight' => 0,
+      ),
+    ),
+    'fortune' => array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => 'fortune',
+      ),
+      '#weight' => 4,
+    ),
+    'controls_area' => array(
+      '#type' => 'containter',
+      '#tree' => TRUE,
+      '#attributes' => array(
+        'id' => 'buzz-controls',
+      ),
+      '#weight' => 6,
+      'title' => array(
+        '#theme' => 'html_tag',
+        '#tag' => 'h2',
+        '#value' => 'Drinks Over Time',
+        '#weight' => 0,
+      ),
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Calculate'),
+    ),
+  );
+  //setup the input controls
+  for($i=0; $i<=10; $i++) {
+    $drink_options[]= $i;
+  }
+  //initialize the form unless it has been processed at least once.
+  for($i=0; $i<= $hours; $i++) {
+    $form['controls_area']['drink_cntr'][$i] = array(
+      '#type' => 'select',
+      '#title' => 'Drink Count',
+      '#attributes' => array(
+        'id' => 'drink-cntr-' . $i,
+      ),
+      '#options' => $drink_options,
+      '#default_value' => 0,
+    );
+    if (!isset($form_state['results'][$i])) {
+      $form_state['results'][$i] = 0;
+    }
+    $form['results_area']['bac_' . $i] = array(
+      '#type' => 'item', //should be an item
+      '#title' => 'BAC: ' . $i,
+      '#markup' => '<p id="bac-' . $i . '" class="bac-result" >' .
+        round($form_state['results'][$i], 3) . '</p>',
+    );
+  }
+  return $form;
+}
+function calculate_bac( $weight, $sex, $drinks, $base ) {
+  $MALE_CONST = 0.58;
+  $FEMALE_CONST = 0.49;
+  $DECREASE = 0.017;  //detox per hour
+  $LBS_PER_KG = 2.2046;
+  $A = 23.36;  // grams ethanol/oz
+  $B = 80.6;  // ml H2O/ml blood * 100
+  $C = .045;  // std alcohol concentration/drink
+  $D = 12;  //std volume (oz)
+  if ($sex == "M") {
+    $gFactor = $MALE_CONST;
+  }
+  elseif ($sex == "F") {
+    $gFactor = $FEMALE_CONST;
+  }
+  else {  //avg.
+    //$gFactor = parseFloat((MALE_CONST + FEMALE_CONST)/2);
+    $gFactor = ($MALE_CONST + $FEMALE_CONST)/2;
+  }
+  //=23.36/(1000*B4*B2/2.2046)*80.6*B1*12*0.045-B5*0.017
+  $bac = $B * $drinks * $D * $C * $A/($gFactor * 1000 * $weight/$LBS_PER_KG) + $base - $DECREASE;
+  if($bac < 0) {
+    $bac = 0;
+  }
+  return $bac;
+}
+function bac_calculator_submit($form, &$form_state) {
+  //dsm($form);
+  //dsm($form_state);
+  $form_state['rebuild']=true;
+  $index = 0;
+  $base = 0;
+  foreach($form_state['values']['controls_area']['drink_cntr'] as $drinks) {
+    $form_state['results'][$index] = calculate_bac(
+      $form_state['values']['weight'],
+      $form_state['values']['sex'],
+      $drinks,
+      $base
+    );
+    $base = $form_state['results'][$index];
+    $index++;
+  }
+  //return $form;
+}

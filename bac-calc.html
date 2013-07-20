@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Project 21: Blood Alcohol Calculator</title>
+</head>
+<body>
+	<div id="intro">
+		<h1>Buzz-O-Graph</h1>
+		<p>Manage your consumption for a 21st night out that you can actually remember!</p>
+	</div>
+	<div id="buzz-o-graphic">
+	</div>
+	<div id="bac-legend"></div>	<div id="vital-statistics">
+	<div id="sex-container">
+		<input type="radio" id="sex-male" name="sex-choice" value="male" /><label for="sex-male">Male</label>
+		<input type="radio" id="sex-female" name="sex-choice" checked="checked" value="female" /><label for="sex-female">Female</label>
+		<input type="radio" id="sex-other" name="sex-choice" value="other" /><label for="sex-other">Other</label>
+	</div>
+	<div id="weight-container">
+		<label for="weight">Your weight:</label>
+		<input type="text" id="weight" style="border: 0; color: #f6931f; font-weight: bold;" />
+	</div>
+	</div>
+	<div id="bac-o-meter"><h2>BAC over Time</h2></div>
+
+	<div id="bac-fortune"></div>
+	<div id="buzz-controls"><h2>Drinks over Time</h2></div>
+</body>
+	<link rel="stylesheet" type="text/css" href="d3/jquery-ui-1.10.3/themes/base/jquery-ui.css" />
+	<link rel="stylesheet" type="text/css" href="styles/bac.css" />
+	<script type="text/javascript" src="d3/jquery-1.9.1.min.js"></script>
+	<script type="text/javascript" src="d3/jquery-ui-1.10.3/ui/jquery-ui.js"></script>
+	<script type="text/javascript" src="d3/d3.v3.min.js"></script>
+	<script type="text/javascript">
+		//d3 script goes here.
+		/*
+		 * Roadmap: Get the colors to correspond to the various stages on the legend. the thresholds. THis is proof of concept for what the thing
+		 * can do. Then also make sure that the drinks exist in time. There need to be anchors so that when you start drinking at 2 your bac doesnt start
+		 * going up at 1:30...
+		*/
+		$(document).ready(function() {
+			var sex = "female", 
+				weight = 100,
+				interval,
+				guideAxis,
+				guideScale,
+				guideText,
+				guide = {},
+				intervals = [],
+				controls = "buzz-controls",
+				output = "bac-o-meter",
+				graph = "buzz-o-graphic",
+				sliders = [],
+				drinks = [],
+				bacs = [],
+				dataset = [],
+				bacData = [],
+				sliderName = 'slider-',
+				bacName = 'bac-',
+				inputName = 'drinks-',
+				hours = 17,
+				minutes = 30,
+				span = 0,
+				hrStart = 12,
+				amPM = " PM";
+				ticks = [];
+				
+			//time intervals and data initialization
+			//break each hour into minutes minute chunks...
+			for (i=0; i <= hours * Math.round(60/minutes); i++) {
+					if (hrStart == 12) {
+						if (span == 0) {
+							ticks[i] = "Noon";
+							amPM = " PM";
+						}
+						else {
+							ticks[i] = hrStart + ":" + span + amPM;
+						}
+						span = span + minutes;
+					}
+					 else if (hrStart == 24) {
+						if (span == 0) {
+							ticks[i] = "Midnight";
+							amPM = " AM";
+						}
+						else {
+							ticks[i] = "12:" + span + amPM;
+						}
+						span = span + minutes;
+					}
+					//default
+					else {
+						ticks[i] = (hrStart % 12) + ":" + span + amPM;
+						span = span + minutes;
+					}
+					if (span % 60 == 0) {
+						span = 0;
+						hrStart++;
+					}
+			}
+			//console.log(ticks);
+			for (i=0; i<=11; i++) {
+				if(i == 0) {
+					intervals[i] = 'noon';
+					intervals[i+12]='midnight';
+				}
+				else if (i < 6) {
+					intervals[i] = i + 'pm';
+					intervals[i+12] = i + 'am';
+				}
+				else {
+					intervals[i] = i + 'pm';
+				}
+			}
+			for(i=0;i<intervals.length;i++){
+			//for(i=0;i<ticks.length;i++){
+				datum=new Object();
+				datum.interval=intervals[i];
+				//datum.interval = ticks[i];
+				datum.bac=0;
+				dataset[i]=datum;
+			}
+			//console.log(dataset);
+			/*
+			 * D3 Visualization Environment Set Up
+			*/
+			var margin = {top: 30, right: 120, bottom: 30, left: 50},
+				width = 720 - margin.left - margin.right,
+				height = 400 - margin.top - margin.bottom;
+
+			//var parseDate = d3.time.format("%d-%b-%y").parse;
+			var x = d3.scale.ordinal().rangePoints([0, width], 1.0);
+				x.domain(dataset.map(function (d){ return d.interval;}));
+			var y = d3.scale.linear().range([height, 0]);
+				y.domain([0, 0.43]);
+				//y.domain([0, d3.max(dataset, function(d) { return parseFloat(d.bac); })]);
+
+			var xAxis = d3.svg.axis().scale(x)
+				.orient("bottom").ticks(ticks.length - 1);
+
+			var yAxis = d3.svg.axis().scale(y)
+				.orient("left").ticks(5);
+
+			var bacLine = d3.svg.line()
+				.interpolate("basis")
+				.x(function(d) { return x(d.interval); })
+				.y(function(d) { return y(parseFloat(d.bac)); });
+				
+			var svg = d3.select("#" + graph)
+				.append("svg")
+					.attr("width", width + margin.left + margin.right)
+					.attr("height", height + margin.top + margin.bottom)
+				.append("g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+			svg.append("path")      // Add the valueline path.
+				.attr("class", "line")
+				.attr("d", bacLine(dataset));
+			//add little circles to each point. If I am clever these can be little handles for grabbing and dragging later.
+			svg.selectAll("dot")
+				.data(dataset)
+				.enter()
+				.append("circle")
+				.attr("class", "dot")
+				.attr("r", 3.5)
+				.attr("cx", function(d) { return x(d.interval); })
+				.attr("cy", function(d) { return y(parseFloat(d.bac)); });
+			svg.append("g")         // Add the X Axis
+				.attr("class", "x axis")
+				.attr("transform", "translate(0," + height + ")")
+				.call(xAxis);
+			svg.append("g")         // Add the Y Axis
+				.attr("class", "y axis")
+				.call(yAxis);
+			var div = d3.select("body").append("div")
+				.attr("class", "tooltip")
+				.style("opacity", 0);
+			initialize();
+			$('#bac-legend').accordion({
+      collapsible: true
+    });;
+			$("input").change(function() {
+				sex = this.value;
+				recalculate();
+			});
+			$("<div id='slider-weight'></div>").insertAfter( '#weight').slider({
+				min: 80,
+				max: 400,
+				value: 100,
+				range: "min",
+				slide: function( event, ui ) {
+					$( "#weight" ).val( ui.value + " lbs" );
+					weight = ui.value;
+					recalculate();
+				}
+			});
+			$( "#weight" ).val( $( "#slider-weight" ).slider( "value" ) + " lbs" );
+
+			function bac( weight, sex, drinks, base ) {
+				var MALE_CONST = 0.58,
+					FEMALE_CONST = 0.49,
+					DECREASE = 0.017,
+					LBS_PER_KG = 2.2046,
+					A = 23.36,
+					B = 80.6,
+					C = .045,
+					D = 12;
+				var bac, gFactor;
+				if (sex == "male") {
+					gFactor = MALE_CONST;
+				}
+				else if (sex == "female") {
+					gFactor = FEMALE_CONST;
+				}
+				else {
+					gFactor = parseFloat((MALE_CONST + FEMALE_CONST)/2);
+				}
+				//=23.36/(1000*B4*B2/2.2046)*80.6*B1*12*0.045-B5*0.017
+				bac = B * drinks * D * C * A/(gFactor * 1000 * weight/LBS_PER_KG) + base - DECREASE;
+				if(bac < 0) {
+					bac = 0;
+				}
+				return bac;
+			}
+			function recalculate() {
+				for (var i=0; i<intervals.length; i++) {
+				//for each hour update the bacs based on the current values.
+					if (i == 0) {
+						bacs[i].value = bac(weight, sex, parseFloat(drinks[i].value), 0);
+					}
+					else {	
+						bacs[i].value = bac(weight, sex, parseFloat(drinks[i].value), parseFloat(bacs[i-1].value));
+					}
+						dataset[i].bac = bacs[i].value;
+						dataset[i].interval = ticks[i];
+				}
+				//update the graph
+				//svg = d3.select("#" + graph).transition();
+				// Make the changes
+				var s = d3.select("#" + graph).transition();
+		 // change the line
+					s.select(".line")
+					.duration(750)
+					.attr("d", bacLine(dataset));
+					s.selectAll("circle.dot")
+					.duration(750)
+					.attr("cx", function(d) { return x(d.interval); })
+					.attr("cy", function(d) { return y(parseFloat(d.bac)); });
+				//console.log(dataset);
+			}
+			function initialize() {
+			
+			// dis busted intervals is unset and ticks is too big.
+			// also need to spread drinks out over the hours. like if you have under six or whatever it spans the hour.
+			
+			
+				//build the controls
+				for (var i=0; i<intervals.length; i++) {
+					$("#" + output).append('<span id="output-' + i + '"></span>');
+					$("#output-" + i).append(
+						'<label for="' + bacName + intervals[i] + '">' + intervals[i] + '</label>',
+						'<input type="text" id="' + bacName + intervals[i] +'" value="0" />'
+					);
+					bacs[i]=document.getElementById(bacName + intervals[i]);
+					$("#" + controls).append('<span id="input-' + i + '"></span>');
+					$("#input-" + i).append('<div id="' + sliderName + intervals[i] + '"></div>',
+						'<label for="' + inputName + intervals[i] + '">' + intervals[i] + '</label>',
+						'<input type="text" id="' + inputName + intervals[i] +'" value="0" />'
+					);
+					drinks[i]=document.getElementById(inputName + intervals[i]);
+					sliders[i] = $("#" + sliderName + intervals[i]).slider({
+						orientation: "vertical",
+						animation:"fast",
+						min: 0,
+						max: 10,
+						range: "min",
+						slide: function( event, ui ) {
+							$(this).siblings('input').val(ui.value);
+							recalculate();
+						}
+					});
+				}
+				//fetch the guide and make it available to the rest of the processes.
+				d3.json("bac-chart.json", function(error, data) {
+					guide = data;
+					//var legend = d3.select('#bac-legend');
+					var legendtop = d3.select('#bac-fortune');
+					var legend = legendtop.selectAll("h3").append("h3").text("Legend");
+					
+					legend.selectAll("p")
+						.data(data.contents)
+						.enter().append("p").attr("class", "legend-entry")
+						.append("p")
+						.html(function(d) {
+							return "<strong>" 
+							  + d.label 
+							  + ": </strong>" 
+							  + d.shortDesc
+							  + "</br>" + d.longDesc;});		
+						var tix = [];
+					for(var j=0;j<guide.contents.length; j++) {
+						tix[j]= {min: guide.contents[j].min, label: guide.contents[j].label};
+						
+					}
+					guideScale = d3.scale.linear().range([height, 0]);
+					guideScale.domain([0, 0.43]);
+					guideAxis = d3.svg.axis().scale(guideScale)
+						.orient("right")
+						.tickValues(guide.contents.map( function(d) {return d.min;}))
+						.tickFormat(function(d) {
+							for(var j=0;j<guide.contents.length; j++) {
+								if(guide.contents[j].min == d) {
+									s = guide.contents[j].shortDesc;
+									s = guide.contents[j].label;
+								}
+							}
+							//return d + ': ' + s;
+							return s;
+						})
+						//.tickValues(tix.map( function(d) {return d.min;}))
+						.tickSize(-width, 0, 0)
+						;
+
+					svg.append("g")         // Add the Y Axis
+						.attr("class", "y axis")
+						.attr("transform", "translate(" + width + ",0)")
+						.call(guideAxis);
+					//console.log(guide);
+				});
+				//console.log(guide);
+			}
+		});
+	</script>
+
+</html>
