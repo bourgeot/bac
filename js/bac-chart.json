@@ -1,0 +1,84 @@
+{
+	"name": "BAC Chart",
+	"header": [
+		{
+		"col": 1,
+		"label": "BAC"
+		},
+		{
+		"col": 2,
+		"label": "Effects on the Average Drinker*",
+		"note": "* Those with a higher tolerance for alcohol may notfeel these effects as quickly as an average drinker. Tolerance often fools you into thinking you are more in control than you really are."
+		},
+		{
+		"col": 3,
+		"label": "Short Version",
+		}
+	],
+	"contents": [
+		{
+			"label": "Zero",
+			"min": 0,
+			"max": 0, 
+			"short-desc": "In the clear",
+			"long-desc": "No BAC means not being hungover, having fun with your friends, and celebrating your 21st safely!"
+	
+		},
+		{
+			"label": ".01 - .05",
+			"min": .01,
+			"max": .05,
+			"short-desc": "Social, having fun, chilling",
+			"long-desc": "You will feel relaxed and more outgoing at this level. Staying in this range means having fun without negative outcomes the next day."
+		},
+		{
+			"label": ".06 - .09",
+			"min" : .06,
+			"max" : .09,
+			"short-desc": "Feeling tipsy",
+			"long-desc": "Your judgement starts to get a little fuzzy. You probably think you are more in control than you really are. You are having fun and feeling happy with a BAC of around 0.08."
+		},
+		{
+			"label": ".10 - .125",
+			"min": .10,
+			"max": .125,
+			"short-desc": "Getting Drunk",
+			"long-desc": "Perceptions of events are altered and reaction times are slower. You start to realize that drinking more did not boost your relaxation and fun."
+		},
+		{
+			"label": ".13 - .15",
+			"min": .13,
+			"max": .15,
+			"short-desc": "Drunk",
+			"long-desc": "Expect blurred vision, loss of balance, and feeling nauseous. Good feelings start to disappear, leaving you feeling anxious and restless."
+		},
+		{
+			"label": ".16 - .19",
+			"min": .16,
+			"max": .19,
+			"short-desc": "Sloppy Drunk; Feeling Sick",
+			"long-desc": "Looking and acting like a sloppy drunk. Staggering and slurred words alert your friends that you have had too much."
+		},
+		{
+			"label": ".20 - .25",
+			"min": .20,
+			"max": .25,
+			"short-desc": "Dazed and confused; blacking out",
+			"long-desc": "You will have a hard time knowing where you are and what is going on. Blackouts (where you are aware but have diminishing functioning and won\'t remember anything tomorrow) happend around 0.20 for the average drinker."
+		},
+		{
+			"label": ".30 - .39",
+			"min": .30,
+			"max": .39,
+			"short-desc": "In a haze, possibly unconscious",
+			"long-desc": "In a haze and possibly unconscious. Alcohol poisoning is likely for lower tolerance drinkers."
+		},
+		{
+			"label": ".40 and Above",
+			"min": .40,
+			"max": .99,
+			"short-desc": "Highest risk of alcohol poisoning and death",
+			"long-desc": "Decreased breathing and heart rate. Highest risk for alcohol poisoning and potentially death."
+		}
+	]
+}

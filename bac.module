@@ -23,7 +23,8 @@ function bac_menu() {
  * action can take place.
  */
 function bac_calculator($form, &$form_state) {
-  drupal_add_js('misc/ui/jquery.ui.slider.min.js', 'file');
+  drupal_add_library('system', 'ui.slider');
+  drupal_add_js('sites/all/libraries/d3/d3.v3.min.js', 'file');
   drupal_add_js('sites/all/modules/bac/js/bac-controls.js', 'file');
   $form=array();
   $hours = 8;
@@ -119,10 +120,15 @@ function bac_calculator($form, &$form_state) {
       '#value' => t('Calculate'),
     ),
   );
+  //retain preset values on recalculation if there are any.
+  if (isset($form_state['results']['weight'])) {
+    $form['weight']['#default_value'] = $form_state['results']['weight'];
+  }
   //setup the input controls
   for($i=0; $i<=10; $i++) {
     $drink_options[]= $i;
   }
+
   //initialize the form unless it has been processed at least once.
   for($i=0; $i<= $hours; $i++) {
     $form['controls_area']['drink_cntr'][$i] = array(
@@ -134,11 +140,15 @@ function bac_calculator($form, &$form_state) {
       '#options' => $drink_options,
       '#default_value' => 0,
     );
+    if (isset($form_state['results']['drinks'][$i])) {
+      $form['controls_area']['drink_cntr'][$i]['#default_value'] =
+        $form_state['results']['drinks'][$i];
+    }
     if (!isset($form_state['results'][$i])) {
       $form_state['results'][$i] = 0;
     }
     $form['results_area']['bac_' . $i] = array(
-      '#type' => 'item', //should be an item
+      '#type' => 'item',
       '#title' => 'BAC: ' . $i,
       '#markup' => '<p id="bac-' . $i . '" class="bac-result" >' .
         round($form_state['results'][$i], 3) . '</p>',
@@ -186,7 +196,34 @@ function bac_calculator_submit($form, &$form_state) {
       $base
     );
     $base = $form_state['results'][$index];
+    $form_state['results']['drinks'][$index] = $drinks;
     $index++;
-  }
+    }
+  $form_state['results']['weight'] = $form_state['values']['weight'];
   //return $form;
+}
+function bac_fortune($peak = 0.00) {
+  //load the bac_horoscope nodes and return the ones which apply
+  // based on the input.
+  $fortune = array();
+  $query = new EntityFieldQuery();
+  $result = $query
+    ->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'bac_horoscope')
+    //->fieldCondition('field_min_bac', 'value', $peak, '>=')
+    ->fieldCondition('field_max_bac', 'value', floatval($peak), '<=')
+    ->execute();
+  if(!empty($result['node'])) {
+    $nodes = node_load_multiple(array_keys($result['node']));
+    $index = 0;
+    foreach( $nodes as $node) {
+      dsm($node);
+      $fortune[$index]['title'] = $node->title;
+      $fortune[$index]['body'] = $node->body[LANGUAGE_NONE][0]['value'];
+      $fortune[$index]['min'] = $node->field_min_bac[LANGUAGE_NONE][0]['value'];
+      $fortune[$index]['max'] = $node->field_max_bac[LANGUAGE_NONE][0]['value'];
+      $index++;
+    }
+  }
+  return $fortune;
 }
