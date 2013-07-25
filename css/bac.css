@@ -1,0 +1,42 @@
+#buzz-controls span {
+  height: 120px;
+  float: left;
+  margin: 15px;
+}
+#bac-o-meter span {
+  height: 36px;
+  float: left;
+  margin: 15px;
+}
+
+span input {
+  width: 36px;
+}
+#bac-o-meter, #buzz-controls, span label {
+  display:block;
+  clear: both;
+}
+#weight-container {
+  width: 240px;
+}
+#vital-statistics {
+  margin: 30px;
+}
+#buzz-o-graphic {
+  font: 6px Arial;
+}
+path {
+  stroke: steelblue;
+  stroke-width: 2;
+  fill: none;
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: grey;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.title {
+  font: 24px;
+}

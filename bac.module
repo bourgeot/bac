@@ -23,11 +23,78 @@ function bac_menu() {
  * action can take place.
  */
 function bac_calculator($form, &$form_state) {
+  $path = drupal_get_path('module', 'bac');
   drupal_add_library('system', 'ui.slider');
   drupal_add_js('sites/all/libraries/d3/d3.v3.min.js', 'file');
-  drupal_add_js('sites/all/modules/bac/js/bac-controls.js', 'file');
+  drupal_add_js( $path . '/js/bac-controls.js', 'file');
+  drupal_add_css($path . '/css/bac.css', 'file');
   $form=array();
-  $hours = 8;
+  $times = array(
+    '12' => '12:00 PM',
+    '13' => '1:00 PM',
+    '14' => '2:00 PM',
+    '15' => '3:00 PM',
+    '16' => '4:00 PM',
+    '17' => '5:00 PM',
+    '18' => '6:00 PM',
+    '19' => '7:00 PM',
+    '20' => '8:00 PM',
+    '21' => '9:00 PM',
+    '22' => '10:00 PM',
+    '23' => '11:00 PM',
+    '24' => '12:00 AM',
+    '25' => '1:00 AM',
+    '26' => '2:00 AM',
+    '27' => '3:00 AM',
+    '28' => '4:00 AM',
+    '29' => '5:00 AM',
+    '30' => '6:00 AM',
+    '31' => '7:00 AM',
+    '32' => '8:00 AM',
+    '33' => '9:00 AM',
+    '34' => '10:00 AM',
+    '35' => '11:00 AM',
+  );
+
+  //tell fortune based on peak bac
+  if (!isset($form_state['results']['peak'])) {
+    $fortune = bac_fortune(0);
+    $leftover = '';
+    $peak = '';
+  }
+  else {
+    $fortune = bac_fortune($form_state['results']['peak']);
+    if ($form_state['results']['peak'] > 0) {
+      $peak = '<p>With your current plan, your BAC will peak around '
+        . round($form_state['results']['peak'], 3)
+        . ' between ' . $times[$form_state['results']['peak_time_key']]
+        . ' and ' . $times[$form_state['results']['peak_time_key'] + 1]
+        . '.</p>';
+      //if the leftover is not 0,
+      //determine how long it will take for the bac to drop to zero after the last
+      //measurement.
+      $hours = 0;
+      $leftover = $form_state['results']['leftover'];
+      while ($leftover > 0) {
+        $leftover = $leftover - 0.017;
+        $hours++;
+      }
+      if ($hours == 0) {
+        $leftover = "<p>Your bac will be zero at the end of your evening.</p>";
+      }
+      elseif ($hours == 1) {
+        $leftover = '<p>It will take at least 1 hour after your evening ends for your bac to drop to zero.</p>';
+      }
+      else {
+        $leftover = '<p>It will take at least '
+        . $hours . ' hours after your evening ends for your bac to drop to zero.</p>';
+      }
+    }
+    else {
+      $peak = '';
+      $leftover = '';
+    }
+  }
   $form = array(
     'intro' => array(
       '#type' => 'container',
@@ -36,14 +103,49 @@ function bac_calculator($form, &$form_state) {
       ),
       '#weight' => 0,
       array(
-      '#theme' => 'html_tag',
-      '#tag' => 'h2',
-      '#value' => 'Buzz-O-Graph',
+        '#theme' => 'html_tag',
+        '#tag' => 'h2',
+        '#value' => 'Buzz-O-Graph',
       ),
       array(
-      '#theme' => 'html_tag',
-      '#tag' => 'p',
-      '#value' => 'Manage your consumption for a 21st night out you can actually remember!',
+        '#theme' => 'html_tag',
+        '#tag' => 'p',
+        '#value' => 'Manage your consumption for a 21st night out you can actually remember!',
+      ),
+    ),
+    'control_controls' => array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => 'control-controls',
+      ),
+      '#weight' => 2,
+      'title' => array(
+        '#theme' => 'html_tag',
+        '#tag' => 'h3',
+        '#value' => 'Event Details',
+        '#weight' => 0,
+      ),
+      'start' => array(
+        '#type' => 'select',
+        '#title' => 'Start Time',
+        '#attributes' => array(
+          'id' => 'start-time',
+        ),
+        '#options' => $times,
+        '#default_value' => '12',
+      ),
+      'end' => array(
+        '#type' => 'select',
+        '#title' => 'End Time',
+        '#attributes' => array(
+          'id' => 'end-time',
+        ),
+        '#options' => $times,
+        '#default_value' => '35',
+      ),
+      array(
+        '#type' => 'submit',
+        '#value' => t('Update'),
       ),
     ),
     'bog' => array(
@@ -51,7 +153,7 @@ function bac_calculator($form, &$form_state) {
       '#attributes' => array(
         'id' => 'buzz-o-graphic',
       ),
-      '#weight' => 1,
+      '#weight' => 0,
     ),
     'legend' => array(
       '#type' => 'container',
@@ -66,6 +168,12 @@ function bac_calculator($form, &$form_state) {
         'id' => 'vital-statistics',
       ),
       '#weight' => 3,
+      'title' => array(
+        '#theme' => 'html_tag',
+        '#tag' => 'h3',
+        '#value' => 'Vital Statistics',
+        '#weight' => 0,
+      ),      
       'sex' => array(
         '#type' => 'radios',
         '#title' => 'Sex',
@@ -82,14 +190,14 @@ function bac_calculator($form, &$form_state) {
       ),
     ),
     'results_area' => array(
-      '#type' => 'containter',
+      '#type' => 'container',
       '#attributes' => array(
         'id' => 'buzz-o-meter',
       ),
       '#weight' => 4,
       'title' => array(
         '#theme' => 'html_tag',
-        '#tag' => 'h2',
+        '#tag' => 'h3',
         '#value' => 'BAC Over Time',
         '#weight' => 0,
       ),
@@ -100,12 +208,30 @@ function bac_calculator($form, &$form_state) {
         'id' => 'fortune',
       ),
       '#weight' => 4,
+      'title' => array(
+        '#theme' => 'html_tag',
+        '#tag' => 'h2',
+        '#value' => 'Your Fortune',
+        '#weight' => 0,
+      ),
+      'summary' => array(
+        '#theme' => 'html_tag',
+        '#tag' => 'h4',
+        '#value' => $fortune[0]['title'],
+        '#weight' => 1,
+      ),
+      'detail' => array(
+        //'#theme' => 'item',
+        //'#tag' => 'p',
+        '#markup' => $peak . $fortune[0]['body'] . $leftover,
+        '#weight' => 2,
+      ),
     ),
     'controls_area' => array(
-      '#type' => 'containter',
+      '#type' => 'container',
       '#tree' => TRUE,
       '#attributes' => array(
-        'id' => 'buzz-controls',
+        'id' => 'drink-controls',
       ),
       '#weight' => 6,
       'title' => array(
@@ -115,10 +241,10 @@ function bac_calculator($form, &$form_state) {
         '#weight' => 0,
       ),
     ),
-    'submit' => array(
-      '#type' => 'submit',
-      '#value' => t('Calculate'),
-    ),
+    //'submit' => array(
+    //  '#type' => 'submit',
+    //  '#value' => t('Calculate'),
+    //),
   );
   //retain preset values on recalculation if there are any.
   if (isset($form_state['results']['weight'])) {
@@ -130,12 +256,23 @@ function bac_calculator($form, &$form_state) {
   }
 
   //initialize the form unless it has been processed at least once.
-  for($i=0; $i<= $hours; $i++) {
+  //the number of controls is the difference between the start and the end time.
+  //with a minimum of 1.
+  $begin = $form['control_controls']['start']['#default_value'];
+  $end = $form['control_controls']['end']['#default_value'];
+  if (isset($form_state['results']['begin'])) {
+    $begin = $form_state['results']['begin'];
+    $end = $form_state['results']['end'];
+  }
+  //edge condition. Last time available plus 1 to trap a potential error
+  $times['36'] = '12:00 PM';
+  for($i = $begin; $i<= $end; $i++) {
     $form['controls_area']['drink_cntr'][$i] = array(
       '#type' => 'select',
-      '#title' => 'Drink Count',
+      '#title' => 'Drinks from ' . $times[$i] . ' to ' . $times[$i+1],
       '#attributes' => array(
         'id' => 'drink-cntr-' . $i,
+        'class' => array('drink-control'),
       ),
       '#options' => $drink_options,
       '#default_value' => 0,
@@ -149,7 +286,7 @@ function bac_calculator($form, &$form_state) {
     }
     $form['results_area']['bac_' . $i] = array(
       '#type' => 'item',
-      '#title' => 'BAC: ' . $i,
+      '#title' => 'BAC during  ' . $times[$i] . ' to ' . $times[$i+1],
       '#markup' => '<p id="bac-' . $i . '" class="bac-result" >' .
         round($form_state['results'][$i], 3) . '</p>',
     );
@@ -184,40 +321,64 @@ function calculate_bac( $weight, $sex, $drinks, $base ) {
 }
 function bac_calculator_submit($form, &$form_state) {
   //dsm($form);
-  //dsm($form_state);
+
   $form_state['rebuild']=true;
-  $index = 0;
   $base = 0;
+  $form_state['results']['weight'] = $form_state['values']['weight'];
+  $form_state['results']['peak'] = 0;
+  $index = $form_state['values']['start'];
+  $form_state['results']['begin'] = $form_state['values']['start'];
+  $form_state['results']['end'] = $form_state['values']['end'];
+  if ($form_state['values']['start'] > $form_state['values']['end']) {
+    $form_state['values']['end'] = $form_state['values']['start'];
+    $form_state['results']['end'] = $form_state['values']['start'];
+  }
+
   foreach($form_state['values']['controls_area']['drink_cntr'] as $drinks) {
-    $form_state['results'][$index] = calculate_bac(
+    $base = calculate_bac(
       $form_state['values']['weight'],
       $form_state['values']['sex'],
       $drinks,
       $base
     );
-    $base = $form_state['results'][$index];
+    $form_state['results'][$index] = $base;
     $form_state['results']['drinks'][$index] = $drinks;
-    $index++;
+    if( $base > $form_state['results']['peak']) {
+      $form_state['results']['peak'] = $base;
+      $form_state['results']['peak_time_key'] = $index;
     }
-  $form_state['results']['weight'] = $form_state['values']['weight'];
-  //return $form;
+    $index++;
+  }
+  //index is one larger than the last control. if the last result is not 0,
+  //determine how long it will take for the bac to drop to zero after the last
+  //measurement.
+  if($form_state['results'][$index-1] <= 0) {
+    $form_state['results']['leftover'] = 0;
+  }
+  else {
+    $form_state['results']['leftover'] = $form_state['results'][$index-1];
+  }
+  //dsm($form_state);
 }
 function bac_fortune($peak = 0.00) {
   //load the bac_horoscope nodes and return the ones which apply
   // based on the input.
+  if (floatval($peak) >= 0.999) {
+    $peak = 0.9;
+  }
   $fortune = array();
   $query = new EntityFieldQuery();
   $result = $query
     ->entityCondition('entity_type', 'node')
     ->entityCondition('bundle', 'bac_horoscope')
-    //->fieldCondition('field_min_bac', 'value', $peak, '>=')
-    ->fieldCondition('field_max_bac', 'value', floatval($peak), '<=')
+    ->fieldCondition('field_min_bac', 'value', floatval($peak) + floatval(0.001), '<=')
+    ->fieldCondition('field_max_bac', 'value', floatval($peak), '>=')
     ->execute();
   if(!empty($result['node'])) {
     $nodes = node_load_multiple(array_keys($result['node']));
     $index = 0;
     foreach( $nodes as $node) {
-      dsm($node);
+      //dsm($node);
       $fortune[$index]['title'] = $node->title;
       $fortune[$index]['body'] = $node->body[LANGUAGE_NONE][0]['value'];
       $fortune[$index]['min'] = $node->field_min_bac[LANGUAGE_NONE][0]['value'];
