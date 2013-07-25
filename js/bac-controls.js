@@ -1,6 +1,6 @@
 (function ($) {
-  Drupal.behaviors.bacControlSetup = {
-    attach: function (context, settings) {
+  Drupal.behaviors.bacCalculator = {
+    attach: function (context) {
       $('#buzz-o-graphic').once('bac-graph', Drupal.bacInitialize);
       $('#weight-control').once('bac-controls', Drupal.bacWeightControl);
       $('#control-controls').once('bac-controls', Drupal.bacControlControl);
@@ -11,23 +11,22 @@
           $(this).once('bac-controls', Drupal.bacDrinkControl);
       });
     }
-
   };
-
-  Drupal.bacWeightControl = function() {
+  Drupal.bacWeightContol = function () {
     $("<div id='slider-weight'></div>").insertAfter( '#weight-control').slider({
-          min: 80,
-          max: 400,
-          value: $( "#weight-control" ).val(),
-          range: "min",
-          slide: function( event, ui ) {
-            $( "#weight-control" ).val(ui.value);
-            //weight = ui.value;
-            //recalculate();
-          }
-        });
+      min: 80,
+      max: 400,
+      value: $( "#weight-control" ).val(),
+      range: "min",
+      slide: function( event, ui ) {
+        $( "#weight-control" ).val(ui.value);
+        //weight = ui.value;
+        //recalculate();
+      }
+    });
     $( "#weight-control" ).val( $( "#slider-weight" ).slider( "value" ));
   };
+
   Drupal.bacDrinkControl = function() {
   //find the drink selects and add sliders
           //build the controls
@@ -145,4 +144,5 @@
   function windowDataset() {
   //change the  visible data based on the selected intervals
  } 
-}) (jQuery);
+
+})(jQuery);
