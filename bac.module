@@ -30,6 +30,32 @@ function bac_calculator($form, &$form_state) {
   drupal_add_css($path . '/css/bac.css', 'file');
   $form=array();
   $times = array(
+    '12:00 PM',
+    '1:00 PM',
+    '2:00 PM',
+    '3:00 PM',
+    '4:00 PM',
+    '5:00 PM',
+    '6:00 PM',
+    '7:00 PM',
+    '8:00 PM',
+    '9:00 PM',
+    '10:00 PM',
+    '11:00 PM',
+    '12:00 AM',
+    '1:00 AM',
+    '2:00 AM',
+    '3:00 AM',
+    '4:00 AM',
+    '5:00 AM',
+    '6:00 AM',
+    '7:00 AM',
+    '8:00 AM',
+    '9:00 AM',
+    '10:00 AM',
+    '11:00 AM',
+  );
+  /*$times = array(
     '12' => '12:00 PM',
     '13' => '1:00 PM',
     '14' => '2:00 PM',
@@ -54,8 +80,7 @@ function bac_calculator($form, &$form_state) {
     '33' => '9:00 AM',
     '34' => '10:00 AM',
     '35' => '11:00 AM',
-  );
-
+  );*/
   //tell fortune based on peak bac
   if (!isset($form_state['results']['peak'])) {
     $fortune = bac_fortune(0);
@@ -132,7 +157,8 @@ function bac_calculator($form, &$form_state) {
           'id' => 'start-time',
         ),
         '#options' => $times,
-        '#default_value' => '12',
+        //'#default_value' => '12',
+        '#default_value' => 0,
       ),
       'end' => array(
         '#type' => 'select',
@@ -142,6 +168,7 @@ function bac_calculator($form, &$form_state) {
         ),
         '#options' => $times,
         '#default_value' => '35',
+        '#default_value' => '23',
       ),
       array(
         '#type' => 'submit',
@@ -265,13 +292,14 @@ function bac_calculator($form, &$form_state) {
     $end = $form_state['results']['end'];
   }
   //edge condition. Last time available plus 1 to trap a potential error
-  $times['36'] = '12:00 PM';
+  //$times['36'] = '12:00 PM';
+  $times[] = '12:00 PM';
   for($i = $begin; $i<= $end; $i++) {
     $form['controls_area']['drink_cntr'][$i] = array(
       '#type' => 'select',
       '#title' => 'Drinks from ' . $times[$i] . ' to ' . $times[$i+1],
       '#attributes' => array(
-        'id' => 'drink-cntr-' . $i,
+        'id' => 'drink-select-' . $i,
         'class' => array('drink-control'),
       ),
       '#options' => $drink_options,

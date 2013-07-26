@@ -40,3 +40,9 @@ path {
 .title {
   font: 24px;
 }
+div.form-type-select {
+  display: inline-block;
+}
+div.form-type-item {
+  display: inline-block;
+}
