@@ -68,6 +68,7 @@
           datum=new Object();
             //datum.interval = intervals[i].text;
             datum.interval = timeFormat.parse((i+12).toString());
+            datum.interval = addMinutes(datum.interval, 55);
             datum.bac = 0;
             datum.visible = true;
           dataset[i]=datum;
@@ -120,6 +121,10 @@
         t.select('.area').attr("d", area(dataset));
 
 
+      }
+      //utility function
+      function addMinutes(date, minutes) {
+        return new Date(date.getTime() + minutes*60000);
       }
       function update(startIndex, endIndex) {
         //pass the index of the start select
