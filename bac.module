@@ -13,6 +13,14 @@ function bac_menu() {
       'access callback' => TRUE,
       'type' => MENU_CALLBACK,
     ),
+    'fortune/json' =>array(
+      //'page arguments' => array('bac_calculator'),
+      'page callback' => 'bac_fortune_json',
+      //'title' => t('Interactive Blood Alcohol Calculator'),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+      'delivery callback' => 'drupal_json_output',
+    ),
   );
   return $items;
 }
@@ -200,7 +208,7 @@ function bac_calculator($form, &$form_state) {
         '#tag' => 'h3',
         '#value' => 'Vital Statistics',
         '#weight' => 0,
-      ),      
+      ),
       'sex' => array(
         '#type' => 'radios',
         '#title' => 'Sex',
@@ -295,9 +303,22 @@ function bac_calculator($form, &$form_state) {
   //$times['36'] = '12:00 PM';
   $times[] = '12:00 PM';
   for($i = $begin; $i<= $end; $i++) {
-    $form['controls_area']['drink_cntr'][$i] = array(
+    $form['controls_area'][$i] = array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'class' => array('control-panel'),
+      ),
+    );
+    $form['controls_area'][$i]['legend'] = array(
+      '#theme' => 'html_tag',
+      '#tag' => 'h4',
+      '#value' => $times[$i] . ' to ' . $times[$i+1],
+      '#weight' => 0,
+    );
+    $form['controls_area'][$i]['drink_cntr'] = array(
       '#type' => 'select',
-      '#title' => 'Drinks from ' . $times[$i] . ' to ' . $times[$i+1],
+      //'#title' => 'Drinks from ' . $times[$i] . ' to ' . $times[$i+1],
+      '#title' => 'Drinks: ',
       '#attributes' => array(
         'id' => 'drink-select-' . $i,
         'class' => array('drink-control'),
@@ -312,9 +333,11 @@ function bac_calculator($form, &$form_state) {
     if (!isset($form_state['results'][$i])) {
       $form_state['results'][$i] = 0;
     }
-    $form['results_area']['bac_' . $i] = array(
+   // $form['results_area']['bac_' . $i] = array(
+    $form['controls_area'][$i]['bac_' . $i] = array(
       '#type' => 'item',
-      '#title' => 'BAC during  ' . $times[$i] . ' to ' . $times[$i+1],
+      //'#title' => 'BAC during  ' . $times[$i] . ' to ' . $times[$i+1],
+      '#title' => 'BAC:',
       '#markup' => '<p id="bac-' . $i . '" class="bac-result" >' .
         round($form_state['results'][$i], 3) . '</p>',
     );
@@ -348,8 +371,6 @@ function calculate_bac( $weight, $sex, $drinks, $base ) {
   return $bac;
 }
 function bac_calculator_submit($form, &$form_state) {
-  //dsm($form);
-
   $form_state['rebuild']=true;
   $base = 0;
   $form_state['results']['weight'] = $form_state['values']['weight'];
@@ -362,8 +383,10 @@ function bac_calculator_submit($form, &$form_state) {
     $form_state['results']['end'] = $form_state['values']['start'];
   }
 
-  foreach($form_state['values']['controls_area']['drink_cntr'] as $drinks) {
-    $base = calculate_bac(
+  //foreach($form_state['values']['controls_area']['drink_cntr'] as $drinks) {
+  foreach($form_state['values']['controls_area'] as $key=>$drink_ctr) {
+      $drinks=$drink_ctr['drink_cntr'];
+      $base = calculate_bac(
       $form_state['values']['weight'],
       $form_state['values']['sex'],
       $drinks,
@@ -414,5 +437,28 @@ function bac_fortune($peak = 0.00) {
       $index++;
     }
   }
+  return $fortune;
+}
+function bac_fortune_json() {
+  $fortune = array();
+  $query = new EntityFieldQuery();
+  $result = $query
+    ->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'bac_horoscope')
+    //->fieldCondition('field_min_bac', 'value', floatval($peak) + floatval(0.001), '<=')
+    //->fieldCondition('field_max_bac', 'value', floatval($peak), '>=')
+    ->execute();
+  if(!empty($result['node'])) {
+    $nodes = node_load_multiple(array_keys($result['node']));
+    $index = 0;
+    foreach( $nodes as $node) {
+      $fortune[$index]['title'] = $node->title;
+      $fortune[$index]['body'] = $node->body[LANGUAGE_NONE][0]['value'];
+      $fortune[$index]['min'] = $node->field_min_bac[LANGUAGE_NONE][0]['value'];
+      $fortune[$index]['max'] = $node->field_max_bac[LANGUAGE_NONE][0]['value'];
+      $index++;
+    }
+  }
+  //return drupal_json_encode($fortune);
   return $fortune;
 }

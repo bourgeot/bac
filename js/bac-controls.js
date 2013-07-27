@@ -32,19 +32,33 @@
         });
       });
 
+      /*test for json fortunes.
+      $('<a id="ajax" href="#">Test</a>').insertAfter('body');
+      $('<div id="yaa"></div>').insertAfter('body');
+      $('#ajax').click(function (event) { event.preventDefault();
+      $('#yaa').load('/fortune/json');
+      });*/
       //define the axes and the data we are going to need later.
-      var x, 
+      var x,
         y,
         xAxis,
         yAxis,
         svg,
+        area,
+        fortune,
+        fortunes = [],
+        timeFormat = d3.time.format('%H'), //makes dates
         bacLine;
-        
+
       //define the data
       var dataset = defineDataset();
+      $.getJSON('/fortune/json', function(data) {
+        fortunes = data;
+      });
+
       //set up
       initialize();
-      
+
       //define dataset
       function defineDataset() {
         var datum,
@@ -52,7 +66,8 @@
         var intervals = document.getElementById('start-time').options;
         for(var i=0; i<intervals.length; i++) {
           datum=new Object();
-            datum.interval = intervals[i].text;
+            //datum.interval = intervals[i].text;
+            datum.interval = timeFormat.parse((i+12).toString());
             datum.bac = 0;
             datum.visible = true;
           dataset[i]=datum;
@@ -72,56 +87,89 @@
         else {
           sex = 'trans';
         }
+        //peak is the highest value.
+        var peakTime,
+          peakColor = 'azure',
+          peak = 0;
         for(var i=0; i<dataset.length; i++) {
           drinks = document.getElementById('drink-select-' + i).selectedIndex;
           if (i == 0) {
-            dataset[i].bac = bac(weight, sex, drinks, 0);         
+            dataset[i].bac = bac(weight, sex, drinks, 0);
           }
           else {
             dataset[i].bac = bac(weight, sex, drinks, dataset[i-1].bac);
           }
           document.getElementById('bac-' + i).textContent = dataset[i].bac;
+          if(dataset[i].bac > peak) {
+            peak = dataset[i].bac;
+            peakTime = dataset[i].interval;
+          }
         }
+        //update fortune.
+        $(fortunes).each(function(index) {
+          if( this.min <= peak && this.max >= peak) {
+            //add to the list of fortunes
+            fortune = '<h4>' + this.title + '</h4><p>' + this.body + '</p>';
+            $('#fortune').html(fortune);
+
+          }
+        });
+        //update the graph
         var t = svg.transition().duration(300);
         t.select('.bac-line').attr("d", bacLine(dataset));
+        t.select('.area').attr("d", area(dataset));
+
+
       }
       function update(startIndex, endIndex) {
         //pass the index of the start select
         //pass the index of the end select
         //change xdomain accordingly
-        var intervals = [];
-        var updateset = [];
-        var j = 0;
+        var intervals = [],
+          select,
+          updateset = [],
+          j = 0;
         for (var k=0; k<dataset.length; k++) {
           if (k<startIndex) {
             dataset[k].bac = 0;
-            $('#edit-bac-' + k).hide();
-            $('.form-item-controls-area-drink-cntr-' + k).hide();
-            //document.getElementById(
+            dataset[k].visible = false;
+            //hide the drink counters and set them to zero
+            $('#edit-controls-area-' + k).hide();
+            select=document.getElementById('drink-select-' + k);
+            select.selectedIndex = 0;
+            $(select).change();
           }
           else if(k>endIndex) {
-            $('#edit-bac-' + k).hide();
-            $('.form-item-controls-area-drink-cntr-' + k).hide();
+            dataset[k].visible = false;
+            $('#edit-controls-area-' + k).hide();
+            select = document.getElementById('drink-select-' + k);
+            select.selectedIndex = 0;
+            $(select).change();
           }
           else {
-            $('#edit-bac-' + k).show();          
-            $('.form-item-controls-area-drink-cntr-' + k).show();
-            intervals[j] = dataset[k].interval;
+            dataset[k].visible = true;
+            $('#edit-controls-area-' + k).show();
             updateset[j]=dataset[k];
             j++;
           }
         }
-        x.domain(intervals);
+        recalculate();
+        x.domain([updateset[0].interval, updateset[updateset.length - 1].interval]);
         //update the chart
         var t = svg.transition().duration(300);
         t.select('.x.axis').call(xAxis);
         t.select('.bac-line').attr("d", bacLine(updateset));
+        t.select('.area').attr("d", area(updateset));
     }
       //initialize
+      var xt;
       function initialize() {
         //hide the update button
         $('input.form-submit').hide();
+        //console.log(dataset);
         var intervals = [];
+        var format = d3.time.format('%I:%M %p');
+        var indexFormat = d3.time.format('%H');
         for (var i=0; i<dataset.length; i++) {
           intervals[i] = dataset[i].interval;
         }
@@ -130,18 +178,25 @@
             height = 300 - margin.top - margin.bottom,
             w =  width + margin.left + margin.right,
             h = height + margin.top + margin.bottom;
-        x = d3.scale.ordinal().rangePoints([0, width], 1.0);
-          x.domain(intervals);  //this is what will change.
+        x = d3.time.scale().range([0, width]);
+        x.domain([dataset[0].interval, dataset[dataset.length-1].interval]);
+        //x = d3.scale.linear().range([0, width], 1.0);
+         // x.domain([0,dataset.length]);  //this is what will change.
         y = d3.scale.linear().range([height, 0]);
           y.domain([0,0.5]);
-        xAxis = d3.svg.axis().scale(x)
-          .orient("bottom").ticks(dataset.length);
+        xAxis = d3.svg.axis().scale(x).ticks(d3.time.hours, 1)
+          .orient("bottom");
         yAxis = d3.svg.axis().scale(y)
           .orient("right").ticks(5);
         bacLine = d3.svg.line()
           .interpolate('monotone')
           .x(function(d) { return x(d.interval); })
           .y(function(d) { return y(d.bac); });
+        area = d3.svg.area()
+          .interpolate('monotone')
+          .x(function(d) { return x(d.interval); })
+          .y0(height)
+          .y1(function(d) { return y(d.bac); });
         svg = d3.select("#buzz-o-graphic").append("svg")
           .attr("id", "bac-graph-container")
           //better to keep the viewBox dimensions with variables
@@ -156,8 +211,17 @@
           .call(yAxis);
         svg.append("path")      // Add the valueline path.
           .attr("class", "bac-line")
+          .attr("clip-path", "url(#clip)")
           .attr("d", bacLine(dataset));
-          //initialize();
+        svg.append("clipPath")
+          .attr("id", "clip")  //add the clip path
+          .append("rect")
+            .attr("width", width)
+            .attr("height", height);
+        svg.append("path")  //add the area path
+          .attr("class", "area")
+          .attr("clip-path", "url(#clip)")
+          .attr("d", area(dataset));
       }
       //weight control slider
       $('#weight-control', context).once('bac-calculator', function() {
@@ -188,9 +252,9 @@
           },
           stop: function( event, ui) {
             update(ui.values[0], ui.values[1]);
-            recalculate();
+            //recalculate(); update has recalculate in it.
           }
-        });        
+        });
       });
       //sex radiobox set
       $('input[type=radio]').change(function() { recalculate();});
@@ -205,7 +269,7 @@
                   end.selectedIndex = this.selectedIndex;
                   sliderControl.slider("values", 1, this.selectedIndex);
                 }
-              update(this.selectedIndex, end.selectedIndex);  
+                update(this.selectedIndex, end.selectedIndex);
               }
               else {
                 var start = document.getElementById('start-time');
@@ -217,37 +281,37 @@
                 update(start.selectedIndex, this.selectedIndex);
               }
               //recalculate();
-            });          
+            });
           });
       });
       function bac( weight, sex, drinks, base ) {
-				var MALE_CONST = 0.58,
-					FEMALE_CONST = 0.49,
-					DECREASE = 0.017,
-					LBS_PER_KG = 2.2046,
-					A = 23.36,
-					B = 80.6,
-					C = .045,
-					D = 12;
-				var bac, gFactor;
-				if (sex == "male") {
-					gFactor = MALE_CONST;
-				}
-				else if (sex == "female") {
-					gFactor = FEMALE_CONST;
-				}
-				else {
-					gFactor = parseFloat((MALE_CONST + FEMALE_CONST)/2);
-				}
-				//=23.36/(1000*B4*B2/2.2046)*80.6*B1*12*0.045-B5*0.017
-				bac = B * drinks * D * C * A/(gFactor * 1000 * weight/LBS_PER_KG) + base - DECREASE;
-				if(bac < 0) {
-					bac = 0;
-				}
-				return bac;
-			}
+        var MALE_CONST = 0.58,
+          FEMALE_CONST = 0.49,
+          DECREASE = 0.017,
+          LBS_PER_KG = 2.2046,
+          A = 23.36,
+          B = 80.6,
+          C = .045,
+          D = 12;
+        var bac, gFactor;
+        if (sex == "male") {
+          gFactor = MALE_CONST;
+        }
+        else if (sex == "female") {
+          gFactor = FEMALE_CONST;
+        }
+        else {
+          gFactor = parseFloat((MALE_CONST + FEMALE_CONST)/2);
+        }
+        //=23.36/(1000*B4*B2/2.2046)*80.6*B1*12*0.045-B5*0.017
+        bac = B * drinks * D * C * A/(gFactor * 1000 * weight/LBS_PER_KG) + base - DECREASE;
+        if(bac < 0) {
+          bac = 0;
+        }
+        return bac;
+      }
 
-    }      
+    }
   };
 
 
