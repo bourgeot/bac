@@ -23,7 +23,8 @@ span input {
   margin: 30px;
 }
 #buzz-o-graphic {
-  font: 6px Arial;
+  font: 7px Arial;
+  height: 500px;
 }
 path {
   stroke: steelblue;
@@ -40,9 +41,50 @@ path {
 .title {
   font: 24px;
 }
+path.area {
+  fill: #e7e7e7;
+}
+path.area.blue {
+  fill: blue;
+}
+path.area.green {
+  fill: green;
+}
+path.area.orange {
+  fill: orange;
+}
+path.area.red {
+  fill: red;
+}
+path.area.yellow {
+  fill: yellow;
+}
+path.area.black {
+  fill: black;
+}
 div.form-type-select {
-  display: inline-block;
 }
 div.form-type-item {
+}
+div.control-panel {
   display: inline-block;
+  width: 22%;
+  margin-right: 2%;
+  border: 1px solid;
+}
+@media screen and (max-width: 700px) {
+#drink-controls .control-panel {
+width: 30%;
+}
+}
+@media screen and (max-width: 400px) {
+#drink-controls .control-panel {
+width: 47%;
+}
+}
+@media screen and (max-width: 300px) {
+#drink-controls .control-panel {
+width: 100%;
+margin-right: 0;
+}
 }

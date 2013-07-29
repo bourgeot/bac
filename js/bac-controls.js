@@ -45,13 +45,16 @@
         yAxis,
         svg,
         area,
+        color,
         fortune,
         fortunes = [],
         timeFormat = d3.time.format('%H'), //makes dates
+        timeIntervals = [],
         bacLine;
 
       //define the data
       var dataset = defineDataset();
+      //get the fortunes
       $.getJSON('/fortune/json', function(data) {
         fortunes = data;
       });
@@ -59,7 +62,7 @@
       //set up
       initialize();
 
-      //define dataset
+      //define dataset and time intervals
       function defineDataset() {
         var datum,
           dataset = [];
@@ -67,7 +70,8 @@
         for(var i=0; i<intervals.length; i++) {
           datum=new Object();
             //datum.interval = intervals[i].text;
-            datum.interval = timeFormat.parse((i+12).toString());
+            timeIntervals[i] = timeFormat.parse((i+12).toString());
+            datum.interval = timeIntervals[i];
             datum.interval = addMinutes(datum.interval, 55);
             datum.bac = 0;
             datum.visible = true;
@@ -90,7 +94,7 @@
         }
         //peak is the highest value.
         var peakTime,
-          peakColor = 'azure',
+          peakColor = 'gray',
           peak = 0;
         for(var i=0; i<dataset.length; i++) {
           drinks = document.getElementById('drink-select-' + i).selectedIndex;
@@ -100,7 +104,7 @@
           else {
             dataset[i].bac = bac(weight, sex, drinks, dataset[i-1].bac);
           }
-          document.getElementById('bac-' + i).textContent = dataset[i].bac;
+          document.getElementById('bac-' + i).textContent = Math.round(dataset[i].bac*1000)/1000;
           if(dataset[i].bac > peak) {
             peak = dataset[i].bac;
             peakTime = dataset[i].interval;
@@ -112,13 +116,13 @@
             //add to the list of fortunes
             fortune = '<h4>' + this.title + '</h4><p>' + this.body + '</p>';
             $('#fortune').html(fortune);
-
+            peakColor = this.color;
           }
         });
         //update the graph
         var t = svg.transition().duration(300);
         t.select('.bac-line').attr("d", bacLine(dataset));
-        t.select('.area').attr("d", area(dataset));
+        t.select('.area').style('fill', peakColor).attr("d", area(dataset));
 
 
       }
@@ -126,6 +130,7 @@
       function addMinutes(date, minutes) {
         return new Date(date.getTime() + minutes*60000);
       }
+      //function update
       function update(startIndex, endIndex) {
         //pass the index of the start select
         //pass the index of the end select
@@ -159,7 +164,8 @@
           }
         }
         recalculate();
-        x.domain([updateset[0].interval, updateset[updateset.length - 1].interval]);
+        //x.domain([updateset[0].interval, updateset[updateset.length - 1].interval]);
+        x.domain([timeIntervals[startIndex], timeIntervals[endIndex]]);
         //update the chart
         var t = svg.transition().duration(300);
         t.select('.x.axis').call(xAxis);
@@ -178,13 +184,14 @@
         for (var i=0; i<dataset.length; i++) {
           intervals[i] = dataset[i].interval;
         }
-        var margin = {top: 20, right: 10, bottom: 20, left: 50},
+        var margin = {top: 20, left: 50, bottom: 20, right: 10},
             width = 700 - margin.left - margin.right,
             height = 300 - margin.top - margin.bottom,
             w =  width + margin.left + margin.right,
             h = height + margin.top + margin.bottom;
         x = d3.time.scale().range([0, width]);
-        x.domain([dataset[0].interval, dataset[dataset.length-1].interval]);
+        //x.domain([dataset[0].interval, dataset[dataset.length-1].interval]);
+        x.domain([timeIntervals[0], timeIntervals[timeIntervals.length-1]]);        
         //x = d3.scale.linear().range([0, width], 1.0);
          // x.domain([0,dataset.length]);  //this is what will change.
         y = d3.scale.linear().range([height, 0]);
@@ -192,7 +199,7 @@
         xAxis = d3.svg.axis().scale(x).ticks(d3.time.hours, 1)
           .orient("bottom");
         yAxis = d3.svg.axis().scale(y)
-          .orient("right").ticks(5);
+          .orient("left").ticks(5);
         bacLine = d3.svg.line()
           .interpolate('monotone')
           .x(function(d) { return x(d.interval); })
@@ -206,13 +213,16 @@
           .attr("id", "bac-graph-container")
           //better to keep the viewBox dimensions with variables
           .attr("viewBox", "0 0 " + w + " " + h )
-          .attr("preserveAspectRatio", "xMidYMid meet");
+          .attr("preserveAspectRatio", "xMidYMid meet")
+          .append('g')
+            .attr('transform', 'translate(' + margin.left + ',' + margin.top + ")");
         svg.append("g")         // Add the X Axis
           .attr("class", "x axis")
           .attr("transform", "translate(0," + height + ")")
           .call(xAxis);
         svg.append("g")         // Add the Y Axis
           .attr("class", "y axis")
+          //.attr("transform", "translate(" + margin.left + ",0)")
           .call(yAxis);
         svg.append("path")      // Add the valueline path.
           .attr("class", "bac-line")

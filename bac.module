@@ -456,6 +456,7 @@ function bac_fortune_json() {
       $fortune[$index]['body'] = $node->body[LANGUAGE_NONE][0]['value'];
       $fortune[$index]['min'] = $node->field_min_bac[LANGUAGE_NONE][0]['value'];
       $fortune[$index]['max'] = $node->field_max_bac[LANGUAGE_NONE][0]['value'];
+      $fortune[$index]['color'] = $node->field_color[LANGUAGE_NONE][0]['value'];
       $index++;
     }
   }
