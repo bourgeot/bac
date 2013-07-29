@@ -45,7 +45,7 @@
         yAxis,
         svg,
         area,
-        color,
+        peakColor = 'gray',
         fortune,
         fortunes = [],
         timeFormat = d3.time.format('%H'), //makes dates
@@ -94,7 +94,7 @@
         }
         //peak is the highest value.
         var peakTime,
-          peakColor = 'gray',
+          //peakColor = 'gray',
           peak = 0;
         for(var i=0; i<dataset.length; i++) {
           drinks = document.getElementById('drink-select-' + i).selectedIndex;
@@ -120,9 +120,10 @@
           }
         });
         //update the graph
-        var t = svg.transition().duration(300);
-        t.select('.bac-line').attr("d", bacLine(dataset));
-        t.select('.area').style('fill', peakColor).attr("d", area(dataset));
+        apply_transition(dataset);
+        //var t = svg.transition().duration(300);
+        //t.select('.bac-line').attr("d", bacLine(dataset));
+        //t.select('.area').style('fill', peakColor).attr("d", area(dataset));
 
 
       }
@@ -167,10 +168,11 @@
         //x.domain([updateset[0].interval, updateset[updateset.length - 1].interval]);
         x.domain([timeIntervals[startIndex], timeIntervals[endIndex]]);
         //update the chart
-        var t = svg.transition().duration(300);
-        t.select('.x.axis').call(xAxis);
-        t.select('.bac-line').attr("d", bacLine(updateset));
-        t.select('.area').attr("d", area(updateset));
+        //var t = svg.transition().duration(300);
+        //t.select('.x.axis').call(xAxis);
+        //t.select('.bac-line').attr("d", bacLine(updateset));
+        //t.select('.area').attr("d", area(updateset));
+        apply_transition(updateset);
     }
       //initialize
       var xt;
@@ -324,6 +326,19 @@
           bac = 0;
         }
         return bac;
+      }
+      function apply_transition(dataset) {
+        var updateset = dataset;
+        var anchor = [];
+        var anchorPt = new Object;
+          anchorPt.bac = 0;
+          anchor.visible = true;
+          anchorPt.interval = timeIntervals[document.getElementById('start-time').selectedIndex];
+        anchor.push(anchorPt);
+        var t = svg.transition().duration(300);
+        t.select('.x.axis').call(xAxis);
+        t.select('.bac-line').attr("d", bacLine(anchor.concat(updateset)));
+        t.select('.area').style('fill', peakColor).attr("d", area(anchor.concat(updateset)));
       }
 
     }
